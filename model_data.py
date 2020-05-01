@@ -4,10 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from GSLSSVM import k_training
 
-
-
 #заполнение данных, k массивов по n элементов
-n = 30                                                 # количество элементов в каждой из частей выборки
+n = 20                                                 # количество элементов в каждой из частей выборки
 k = 3                                                   # кратность перекрестной проверки
 x=[]
 for i in range(k):                                      # генерация неповторяющихся вещественных чисел   
@@ -29,8 +27,8 @@ C_begin = 2 ** (1)
 C_end = (2 ** (16)) * d
 C = C_begin
 
-sigma_begin = 0.1
-sigma_end = 2.3
+sigma_begin = 2
+sigma_end = 5
 sigma_step = 0.2
 s_range =np.arange(sigma_begin, sigma_end, sigma_step)
 
@@ -45,11 +43,23 @@ while C <= C_end:
             C_min = C
             sigma_min = sigma
     C *= 2
-        
+
+C = C_min
+# уточнение sigma
+sigma_begin = sigma_min - sigma_step
+sigma_end = sigma_min + sigma_step
+sigma_step = sigma_step / 10
+s_range =np.arange(sigma_begin, sigma_end, sigma_step)
+for sigma in s_range:
+        print("sigma = " + str(sigma))
+        inf_cur = k_training(k, n, x, y, C, sigma, d // 10, False)
+        if (sigma == sigma_begin) or (inf_cur < inf_min):
+            inf_min = inf_cur
+            sigma_min = sigma
 
 print("C_min = " + str(C_min))
 print("sigma_min = " + str(sigma_min))
-C = C_min
+
 sigma = sigma_min
 inf = k_training(k, n, x, y, C, sigma, n, True)
 

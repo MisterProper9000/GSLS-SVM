@@ -80,7 +80,8 @@ def LS_SVM(C, sigma, K, x_tr, y_tr, nv_max, return_array):
             H = np.hstack((H, F_v))
 
             if np.linalg.det(H) == 0:
-                print('here')
+                print('Error: nv = ' + str(nv) + ' from ' + str(nv_max))
+            
             B = np.linalg.solve(H, np.array(v))
 
             if Ind[len(Ind) - 1] == -1: 
