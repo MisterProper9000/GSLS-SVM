@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import time
 
 # функция вычисления значения ядра для двух элементов
 # x1, x2 - элементы
@@ -74,6 +75,9 @@ def LS_SVM(C, sigma, K, x_tr, y_tr, nv_max, return_array):
     for nv_i in range(nv_max):
         Ind = list(set(range(l)) - set(S)) + [-1]  # список свободных индексов
         S.append(0)                                # добавление к ОВ нового индекса
+        #millis_start = int(round(time.time() * 1000))
+
+        #np_millis = 0
         for i in Ind:                              # пеербор всех свободных индексов, для каждого строится и решается СЛАУ
             S[nv_i] = i
 
@@ -90,16 +94,19 @@ def LS_SVM(C, sigma, K, x_tr, y_tr, nv_max, return_array):
                 F[nv_i] += K[i][j]
 
 
+            
             # построение матрицы Omega
             if Omega.size == nv_i ** 2:
                 Omega = np.vstack((Omega, np.zeros((nv_i), dtype=float)))    # добавление строки в матрицу 
                 Omega = np.hstack((Omega, np.zeros((nv_i + 1, 1), dtype=float))) # добавление столбца в матрицу 
-
+            #millis_start1 = int(round(time.time() * 1000))
             for j in range(nv_i + 1):
                 Omega[nv_i][j] = l / (2.*gamma) * K[i][S[j]]
                 for r in range(l):
                     Omega[nv_i][j]  += K[r][S[j]] * K[r][i]
                 Omega[j][nv_i] = Omega[nv_i][j]
+            #np_millis += int(round(time.time() * 1000)) - millis_start1
+           
             
             # конструирование матрицы СЛАУ из Omega и F
             H = Omega
@@ -108,13 +115,15 @@ def LS_SVM(C, sigma, K, x_tr, y_tr, nv_max, return_array):
             F_v = np.insert(F_v, nv_i + 1, l)
             F_v = F_v.reshape(nv_i + 2, 1)
             H = np.hstack((H, F_v))
-
             
             if np.linalg.det(H) == 0:                           # проверка определителя матрицы
+                print("H", H)
+                print("F_v", F_v)
                 print('Error: nv = ' + str(nv_i) + ' from ' + str(nv_max))
             
+            
             B = np.linalg.solve(H, np.array(v))                 # решение СЛАУ
-
+            
             if Ind[len(Ind) - 1] == -1:                         # если не найден минимальный индекс
 
                 LS_cur = LS(B, S, K, l, y_tr, gamma)            # вычисление целевой функции
@@ -129,6 +138,10 @@ def LS_SVM(C, sigma, K, x_tr, y_tr, nv_max, return_array):
 
             if i == Ind[len(Ind) - 2]:                          # если пройдены все свободные индексы добавляем в список найденный минимальный индекс и подготавливаем Omega, F, v
                 Ind[len(Ind) - 1] = Ind_min
+
+        #print("cur size:", nv_i, int(round(time.time() * 1000)) - millis_start)
+        #print("cur size:", nv_i, np_millis)
+        #9:230
     if return_array:
         return [B_arr, S] 
     else:
@@ -144,6 +157,10 @@ def LS_SVM(C, sigma, K, x_tr, y_tr, nv_max, return_array):
 #           среднеквакдратическая ошибка для каждого количества опорных векторов
 #           или только для максимального
 # Возвращаемое значение: среднеквадратическая ошибка
+
+K = []
+cashed_sigma = 0
+
 def k_training(k, n, x, y, C, sigma, nv_max, return_array):
     if return_array:
         inf_arr = []
@@ -165,11 +182,11 @@ def k_training(k, n, x, y, C, sigma, nv_max, return_array):
 
         l = len(x_tr)
         # заполнение матрицы ядра 
-        K = [[0] * l for i in range(l)]
-        for i in range(l):
-            for j in range(l):
-                K[i][j] = Kernel(x_tr[i], x_tr[j], sigma)  
-
+        if (sigma != cashed_sigma):
+            K = [[0] * l for i in range(l)]
+            for i in range(l):
+                for j in range(l):
+                    K[i][j] = Kernel(x_tr[i], x_tr[j], sigma)
         
         if return_array:
             [B_arr, S] = LS_SVM(C, sigma, K, x_tr, y_tr, nv_max, True)  # построение машины
