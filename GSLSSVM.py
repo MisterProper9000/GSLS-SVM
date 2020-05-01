@@ -1,19 +1,30 @@
 import math
 import numpy as np
 
-
+# функция вычисления значения ядра для двух элементов
+# x1, x2 - элементы
+# s - sigma, параметр ядра
 def Kernel(x1, x2, s):
     return math.exp(-(s**(-2)) * ((x1 - x2) ** 2))
 
-   
+# целевая функция задачи оптимизации
+# B - вектор коэффициентов бэта и последний элемент это b
+# S - вектор индексов опорных векторов
+# K - матрица ядра l на l
+# l - размер тренировочной последовательности
+# y - вектор компонент y_i тренировочной последовательности
+# gamma - параментр машины 
+# Возвращаемое значение: значение целевой функции
 def LS(B, S, K, l, y, gamma):
+    
+    # вычисление левой части выражения
     val_left = 0
-
     for i in range(len(S)):
         for j in range(len(S)):
             val_left += B[i] * B[j] * K[S[i]][S[j]]
     val_left *= 0.5
 
+    # вычисление правой части выражения
     val_right = 0
     for i in range(l):
         val = y[i]
@@ -25,6 +36,12 @@ def LS(B, S, K, l, y, gamma):
     val_right *= gamma / l
     return val_left + val_right
 
+# функция регрессии для элемента x
+# x - элемент
+# x_ref - тренировочная последовательность
+# S - индексы опорных векторов
+# B - вектор коэффициентов бэта и последний элемент это b
+# sigma - параметр машины
 def f(x, x_ref, S, B, sigma):
     res = 0
     for i in range(len(B) - 1):
@@ -32,23 +49,35 @@ def f(x, x_ref, S, B, sigma):
     res += B[len(B) - 1]
     return res
 
+
+# функция поиска индексов опорных векторов
+# C, sigma - парметры машины
+# K - матрица ядра lxl
+# x_tr - вектор компонент x_i тренировочной последовательности
+# y_tr - вектор компонент y_i тренировочной последовательности
+# nv_max - искомое количество опорных векторов
+# return_array - [True, False] - параметр, определяющий возвращаются ли
+#           коэффициенты бэта для каждого количества опорных векторов
+#           или только для максимального
+# Возвращаемое значение: список векторов с коэффициентами бэта для каждого вектора[B] и индексами опорных векторов [S]
 def LS_SVM(C, sigma, K, x_tr, y_tr, nv_max, return_array):
     gamma = C
     y_sum = sum(y_tr)
     l = len(x_tr)
     
     B_arr = []
-    S = []
-    v = [y_sum]                                         # Вектор (правая часть системы) 
-    F = []
-    Omega = np.zeros((1,1)) 
+    S = []                                  # Вектор индексов опорных векторов
+    v = [y_sum]                             # Вектор (правая часть системы) 
+    F = []                                  # Вектор Ф
+    Omega = np.zeros((1,1))                 # матрица Omega
 
     for nv_i in range(nv_max):
-        Ind = list(set(range(l)) - set(S)) + [-1]
-        S.append(0)
-        for i in Ind:
+        Ind = list(set(range(l)) - set(S)) + [-1]  # список свободных индексов
+        S.append(0)                                # добавление к ОВ нового индекса
+        for i in Ind:                              # пеербор всех свободных индексов, для каждого строится и решается СЛАУ
             S[nv_i] = i
 
+            # построение v и F
             if len(F) == nv_i: 
                 v.insert(nv_i, 0)
                 F.append(0)
@@ -61,6 +90,7 @@ def LS_SVM(C, sigma, K, x_tr, y_tr, nv_max, return_array):
                 F[nv_i] += K[i][j]
 
 
+            # построение матрицы Omega
             if Omega.size == nv_i ** 2:
                 Omega = np.vstack((Omega, np.zeros((nv_i), dtype=float)))    # добавление строки в матрицу 
                 Omega = np.hstack((Omega, np.zeros((nv_i + 1, 1), dtype=float))) # добавление столбца в матрицу 
@@ -71,7 +101,7 @@ def LS_SVM(C, sigma, K, x_tr, y_tr, nv_max, return_array):
                     Omega[nv_i][j]  += K[r][S[j]] * K[r][i]
                 Omega[j][nv_i] = Omega[nv_i][j]
             
-
+            # конструирование матрицы СЛАУ из Omega и F
             H = Omega
             F_v = np.array(F) 
             H = np.vstack((H, F_v))
@@ -79,15 +109,17 @@ def LS_SVM(C, sigma, K, x_tr, y_tr, nv_max, return_array):
             F_v = F_v.reshape(nv_i + 2, 1)
             H = np.hstack((H, F_v))
 
-            if np.linalg.det(H) == 0:
-                print('Error: nv = ' + str(nv) + ' from ' + str(nv_max))
             
-            B = np.linalg.solve(H, np.array(v))
+            if np.linalg.det(H) == 0:                           # проверка определителя матрицы
+                print('Error: nv = ' + str(nv_i) + ' from ' + str(nv_max))
+            
+            B = np.linalg.solve(H, np.array(v))                 # решение СЛАУ
 
-            if Ind[len(Ind) - 1] == -1: 
-                LS_cur = LS(B, S, K, l, y_tr, gamma)
+            if Ind[len(Ind) - 1] == -1:                         # если не найден минимальный индекс
 
-                if i == Ind[0] or LS_cur < LS_min:
+                LS_cur = LS(B, S, K, l, y_tr, gamma)            # вычисление целевой функции
+
+                if i == Ind[0] or LS_cur < LS_min:              # обновление минимума
                     LS_min = LS_cur
                     Ind_min = i
             else:
@@ -95,14 +127,23 @@ def LS_SVM(C, sigma, K, x_tr, y_tr, nv_max, return_array):
                     B_arr.append(B)
                 break
 
-            if i == Ind[len(Ind) - 2]:
+            if i == Ind[len(Ind) - 2]:                          # если пройдены все свободные индексы добавляем в список найденный минимальный индекс и подготавливаем Omega, F, v
                 Ind[len(Ind) - 1] = Ind_min
     if return_array:
         return [B_arr, S] 
     else:
         return [B, S]
 
-# перекресная проверка кратности k
+# функция перекресной проверки
+# k - кратнорсть проверки
+# n - размер одного подмножества элементов
+# x - валидационное множество 
+# C, sigma - параметры машины
+# nv_max - количество опорных векторов
+# return_array - [True, False] - параметр, определяющий возвращается ли
+#           среднеквакдратическая ошибка для каждого количества опорных векторов
+#           или только для максимального
+# Возвращаемое значение: среднеквадратическая ошибка
 def k_training(k, n, x, y, C, sigma, nv_max, return_array):
     if return_array:
         inf_arr = []
@@ -110,11 +151,13 @@ def k_training(k, n, x, y, C, sigma, nv_max, return_array):
             inf_arr.append(0)
     else:
         inf = 0
+    
 
     for n_test in range(k):
         x_tr = []
         y_tr = []
         
+        # подготовка тренировочной и тестовой последовательности
         for n_tr in range(k):
             if n_tr != n_test:
                 x_tr += x[n_tr]
@@ -129,8 +172,9 @@ def k_training(k, n, x, y, C, sigma, nv_max, return_array):
 
         
         if return_array:
-            [B_arr, S] = LS_SVM(C, sigma, K, x_tr, y_tr, nv_max, True)
-            for nv in range(len(S)):
+            [B_arr, S] = LS_SVM(C, sigma, K, x_tr, y_tr, nv_max, True)  # построение машины
+            # вычисление среднеквартичной ошибки для каждого количества опорных векторов
+            for nv in range(len(S)):                                    
                 y_res = []
                 for i in range(n):
                     y_res = f(x[n_test][i], x_tr, S, B_arr[nv], sigma)

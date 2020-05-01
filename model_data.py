@@ -57,10 +57,12 @@ for sigma in s_range:
             inf_min = inf_cur
             sigma_min = sigma
 
+sigma = sigma_min
+
 print("C_min = " + str(C_min))
 print("sigma_min = " + str(sigma_min))
 
-sigma = sigma_min
+# вычисление среднеквадратичной ошибки для любого количества опорных векторов
 inf = k_training(k, n, x, y, C, sigma, n, True)
 
 plt.plot(range(n), inf, '.-') 
