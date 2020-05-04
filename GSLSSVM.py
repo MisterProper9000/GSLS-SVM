@@ -1,6 +1,6 @@
 import math
 import numpy as np
-import time
+
 
 # функция вычисления значения ядра для двух элементов
 # x1, x2 - элементы
