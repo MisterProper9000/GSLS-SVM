@@ -13,7 +13,7 @@ if __name__ == "__main__":
     x = []
     y = []
 
-    file_name = "model_data.txt"
+    file_name = "Data//noise_data.txt"
     #считывание данных
     data_in = []
     with open(file_name) as f:

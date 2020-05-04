@@ -13,6 +13,6 @@ for i in range(k * n):                                  # генерация н�
 y =  list(map(math.sin, x))
 
 
-with open("model_data.txt", "w") as file:
+with open("Data//model_data.txt", "w") as file:
     print(*x, file=file)
     print(*y, file=file)
