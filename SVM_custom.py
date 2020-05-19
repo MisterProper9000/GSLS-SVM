@@ -7,32 +7,40 @@ from GSLSSVM import k_training
 if __name__ == "__main__":
 
     #заполнение данных, k массивов по n элементов
-    n = 50                                                  # количество элементов в каждой из частей выборки
+    #n = 50                                                  # количество элементов в каждой из частей выборки
     k = 3                                                   # кратность перекрестной проверки
-    x=[]
-    for i in range(k):                                      # генерация неповторяющихся вещественных чисел
-        x.append([]) 
-        j = 0
-        while j < n:
-            r = random.uniform(0, 2 * math.pi)
-            if r not in x[i]: 
-                x[i].append(r)
-                j += 1
-    
+    data_in = []
+    x = []
     y = []
-    for i in range(k):
-        y.append([]) 
-        y[i] =  list(map(math.sin, x[i]))
+
+    file_name = "Data//noise_data.txt"
+    #считывание данных
+    data_in = []
+    with open(file_name) as f:
+        for line in f:
+            data_in.append([float(val) for val in line.split()])
+
+    f_out_RMS = open( "RMS_noise_data.csv", "w") 
+
+    n = len(data_in[0]) // k
+
+    #разбиение данных на k частей
+    part = n
+    for i in range(k):                                      
+        x.append(data_in[0][part - n:part]) 
+        y.append(data_in[1][part - n:part]) 
+        part += n
+
 
     # настройка машины:
     # перебор C
     d = n * (k - 1)
     C_begin = 2 ** (1)
-    C_end = (2 ** (16)) * d
+    C_end = (2 ** (13)) * d
     C = C_begin
 
-    sigma_begin = 2
-    sigma_end = 5
+    sigma_begin = 0.5
+    sigma_end = 4
     sigma_step = 0.2
     s_range =np.arange(sigma_begin, sigma_end, sigma_step)
 
@@ -40,6 +48,7 @@ if __name__ == "__main__":
         # перебор sigma
         C = C_begin
         print("sigma = " + str(sigma))
+        f_out_RMS.write(str(sigma) + "; ")
         while C <= C_end:
             print("C = " + str(C))
             inf_cur = k_training(k, n, x, y, C, sigma, d // 10, False)
@@ -47,20 +56,18 @@ if __name__ == "__main__":
                 inf_min = inf_cur
                 C_min = C
                 sigma_min = sigma
+                print("sigma_min = ", sigma_min, "C_min = ", C, "inf_cur = ", inf_cur)
+                f_out_RMS.write(str(inf_cur) + "; ")
+            else:
+                f_out_RMS.write("0; ")
             C *= 2
+        f_out_RMS.write('\n')
 
+    f_out_RMS.close()
     C = C_min
-    # уточнение sigma
-    sigma_begin = sigma_min - sigma_step
-    sigma_end = sigma_min + sigma_step
-    sigma_step = sigma_step / 10
-    s_range =np.arange(sigma_begin, sigma_end, sigma_step)
-    for sigma in s_range:
-            print("sigma = " + str(sigma))
-            inf_cur = k_training(k, n, x, y, C, sigma, d // 10, False)
-            if (sigma == sigma_begin) or (inf_cur < inf_min):
-                inf_min = inf_cur
-                sigma_min = sigma
+
+    C = 16384
+    sigma = 3.5
 
     sigma = sigma_min
 
@@ -70,23 +77,9 @@ if __name__ == "__main__":
     # вычисление среднеквадратичной ошибки для любого количества опорных векторов
     inf = k_training(k, n, x, y, C, sigma, n, True)
 
-    plt.plot(range(n), inf, '.-')
+    plt.plot(range(4, 41, 1), inf[3:40:1], '.-')
 
     plt.title('Cross-validation error of GSLSSVM')
     plt.xlabel('number of vectors')
     plt.ylabel('RMS error')
     plt.show()
-
-
-
-    # y_res = []
-    # for i in range(n):
-    #   y_res.append(f(x[2][i], x_tr, S, B, sigma))
-
-    # plt.plot(x[2], y_res, '.')  
-
-
-    # plt.plot(x[2], y[2], '*')
-    # for i in S:
-    #     plt.plot(x_tr[i], y_tr[i], 'ok')
-    # plt.show()

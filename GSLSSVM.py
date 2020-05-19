@@ -1,6 +1,6 @@
 import math
 import numpy as np
-import time
+
 
 # функция вычисления значения ядра для двух элементов
 # x1, x2 - элементы
@@ -39,17 +39,36 @@ def LS(B, S, K, l, y, gamma):
 
 # функция регрессии для элемента x
 # x - элемент
-# x_ref - тренировочная последовательность
+# x_tr - тренировочная последовательность
 # S - индексы опорных векторов
 # B - вектор коэффициентов бэта и последний элемент это b
 # sigma - параметр машины
-def f(x, x_ref, S, B, sigma):
+def f(x, x_tr, S, B, sigma):
     res = 0
     for i in range(len(B) - 1):
-        res += B[i] * Kernel(x_ref[S[i]], x, sigma)
+        res += B[i] * Kernel(x_tr[S[i]], x, sigma)
     res += B[len(B) - 1]
     return res
 
+# функция получение обратной блочной матрицы
+# inv_A - обратная матрица блока A
+# b - присоединяемый вектор и строка
+# c - правый нижний элемент матрицы
+# Возвращаемое значение: обратная матрица к [A, b]
+#                                           [b, c]
+def inverse_matrix(inv_A, b = None, c = None):
+    if inv_A.size == 0:
+        inv_M = np.zeros((1,1)) 
+        inv_M[0][0] = 1 / c
+    else:
+        k = c - b.dot(inv_A.dot(b))
+        inv_M = inv_A + (1 / k) * np.outer(inv_A.dot(b), b).dot(inv_A)
+        col = - 1 / k * inv_A.dot(b.reshape(-1, 1))
+        inv_M = np.hstack((inv_M, col))
+        row = -1 / k  * b.dot(inv_A)
+        row = np.append(row, 1 / k)
+        inv_M = np.vstack((inv_M, row))
+    return inv_M
 
 # функция поиска индексов опорных векторов
 # C, sigma - парметры машины
@@ -71,13 +90,13 @@ def LS_SVM(C, sigma, K, x_tr, y_tr, nv_max, return_array):
     v = [y_sum]                             # Вектор (правая часть системы) 
     F = []                                  # Вектор Ф
     Omega = np.zeros((1,1))                 # матрица Omega
+    Omega_inv = np.zeros((0,0))                      # обратная матрица к Omega
+    Omega_i = np.zeros(0) 
 
     for nv_i in range(nv_max):
+        print("nv_i =", nv_i)
         Ind = list(set(range(l)) - set(S)) + [-1]  # список свободных индексов
         S.append(0)                                # добавление к ОВ нового индекса
-        #millis_start = int(round(time.time() * 1000))
-
-        #np_millis = 0
         for i in Ind:                              # пеербор всех свободных индексов, для каждого строится и решается СЛАУ
             S[nv_i] = i
 
@@ -94,37 +113,22 @@ def LS_SVM(C, sigma, K, x_tr, y_tr, nv_max, return_array):
                 F[nv_i] += K[i][j]
 
 
-            
-            # построение матрицы Omega
-            if Omega.size == nv_i ** 2:
-                Omega = np.vstack((Omega, np.zeros((nv_i), dtype=float)))    # добавление строки в матрицу 
-                Omega = np.hstack((Omega, np.zeros((nv_i + 1, 1), dtype=float))) # добавление столбца в матрицу 
-            #millis_start1 = int(round(time.time() * 1000))
+            if Omega_i.size == nv_i:
+                Omega_i = np.append(Omega_i, 0)
             for j in range(nv_i + 1):
-                Omega[nv_i][j] = l / (2.*gamma) * K[i][S[j]]
+                Omega_i[j] = l / (2.*gamma) * K[i][S[j]]
                 for r in range(l):
-                    Omega[nv_i][j]  += K[r][S[j]] * K[r][i]
-                Omega[j][nv_i] = Omega[nv_i][j]
-            #np_millis += int(round(time.time() * 1000)) - millis_start1
+                    Omega_i[j]  += K[r][S[j]] * K[r][i]
            
-            
-            # конструирование матрицы СЛАУ из Omega и F
-            H = Omega
+            # нахождение обратной матрицы Omega
+            Omega_inv_i = inverse_matrix(Omega_inv, Omega_i[:-1], Omega_i[-1])
             F_v = np.array(F) 
-            H = np.vstack((H, F_v))
-            F_v = np.insert(F_v, nv_i + 1, l)
-            F_v = F_v.reshape(nv_i + 2, 1)
-            H = np.hstack((H, F_v))
+            H_inv = inverse_matrix(Omega_inv_i, F_v, l)
             
-            if np.linalg.det(H) == 0:                           # проверка определителя матрицы
-                print("H", H)
-                print("F_v", F_v)
-                print('Error: nv = ' + str(nv_i) + ' from ' + str(nv_max))
+
+            B = H_inv.dot(np.array(v))               # решение СЛАУ
             
-            
-            B = np.linalg.solve(H, np.array(v))                 # решение СЛАУ
-            
-            if Ind[len(Ind) - 1] == -1:                         # если не найден минимальный индекс
+            if Ind[len(Ind) - 1] == -1:                         # если еще не найден минимальный индекс
 
                 LS_cur = LS(B, S, K, l, y_tr, gamma)            # вычисление целевой функции
 
@@ -132,6 +136,7 @@ def LS_SVM(C, sigma, K, x_tr, y_tr, nv_max, return_array):
                     LS_min = LS_cur
                     Ind_min = i
             else:
+                Omega_inv = Omega_inv_i
                 if return_array:
                     B_arr.append(B)
                 break
@@ -139,9 +144,6 @@ def LS_SVM(C, sigma, K, x_tr, y_tr, nv_max, return_array):
             if i == Ind[len(Ind) - 2]:                          # если пройдены все свободные индексы добавляем в список найденный минимальный индекс и подготавливаем Omega, F, v
                 Ind[len(Ind) - 1] = Ind_min
 
-        #print("cur size:", nv_i, int(round(time.time() * 1000)) - millis_start)
-        #print("cur size:", nv_i, np_millis)
-        #9:230
     if return_array:
         return [B_arr, S] 
     else:
