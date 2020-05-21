@@ -12,7 +12,7 @@ for i in range(k * n):                                  # генерация н�
         x.append(r) 
 
 noise = np.random.normal(0,0.1,k * n)
-y =  list(map(math.sin, x))
+y =  list(map(np.sinc, x))
 y_noise = list(map(lambda a, b: a + b, noise, y))
 
 with open("Data//noise_data.txt", "w") as file:

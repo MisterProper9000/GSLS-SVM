@@ -15,7 +15,7 @@ if __name__ == "__main__":
         if r not in x_tr: 
             x_tr.append(r)
     
-    y_tr =  list(map(math.sin, x_tr))
+    y_tr =  list(map(np.sinc, x_tr))
 
 
     x_test = []
@@ -24,12 +24,12 @@ if __name__ == "__main__":
         if r not in x_test: 
             x_test.append(r)
     
-    y_test =  list(map(math.sin, x_test))
+    y_test =  list(map(np.sinc, x_test))
     
 
-    C = 1048576
-    sigma = 2.9
-    nv  = 4                              # оптимальное клоличество опорных векторов
+    C = 524288 # сюда запишем те два числа с первого запуска
+    sigma = 0.7 
+    nv  = 6                              # оптимальное клоличество опорных векторов (пали график №2)
 
 
     K = [[0] * l for i in range(l)]
@@ -43,8 +43,8 @@ if __name__ == "__main__":
     y_res_4 = []
     RMS = 0
     for i in range(l):
-        y_res_3.append(f(x_test[i], x_tr, S, B[2], sigma))
-        y_res_4.append(f(x_test[i], x_tr, S, B[3], sigma))
+        y_res_3.append(f(x_test[i], x_tr, S, B[nv - 2], sigma)) 
+        y_res_4.append(f(x_test[i], x_tr, S, B[nv - 1], sigma))
         # RMS += (y_res[i] - y_test[i]) ** 2
     # RMS  = math.sqrt(RMS / l)
     # print("RMS = ", RMS)
@@ -56,9 +56,9 @@ if __name__ == "__main__":
     x_test_s = [x[0] for x in ideal_s]
     y_test_s  = [x[1] for x in ideal_s]
 
-    plt.plot(x_test_s, y_test_s, '-', label = 'y = sin(x)')
-    plt.plot(x_test, y_res_3, '*', label = 'y = f(x), n_ref = 3')  
-    plt.plot(x_test, y_res_4, '*', label = 'y = f(x), n_ref = 4') 
+    plt.plot(x_test_s, y_test_s, '-', label = 'y = sinc(x)')
+    plt.plot(x_test, y_res_3, '*', label = "y = f(x), n_ref = " + str(nv-1))  
+    plt.plot(x_test, y_res_4, '*', label = "y = f(x), n_ref = " + str(nv)) 
     for i in S:
         x_ref.append(x_tr[i])
         y_ref.append(y_tr[i])

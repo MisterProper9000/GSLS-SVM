@@ -13,14 +13,14 @@ if __name__ == "__main__":
     x = []
     y = []
 
-    file_name = "Data//noise_data.txt"
+    file_name = "Data//noise_data.txt" #ЧЕКАТЬ
     #считывание данных
     data_in = []
     with open(file_name) as f:
         for line in f:
             data_in.append([float(val) for val in line.split()])
 
-    f_out_RMS = open( "RMS_noise_data.csv", "w") 
+    f_out_RMS = open( "RMS_noise_data.csv", "w")  #ЧЕКАТЬ
 
     n = len(data_in[0]) // k
 
@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
     # настройка машины:
     # перебор C
-    d = n * (k - 1)
+    """ d = n * (k - 1) # для второго графика закомментить от сюда
     C_begin = 2 ** (1)
     C_end = (2 ** (13)) * d
     C = C_begin
@@ -42,7 +42,7 @@ if __name__ == "__main__":
     sigma_begin = 0.5
     sigma_end = 4
     sigma_step = 0.2
-    s_range =np.arange(sigma_begin, sigma_end, sigma_step)
+    s_range = np.arange(sigma_begin, sigma_end, sigma_step)
 
     for sigma in s_range:
         # перебор sigma
@@ -64,20 +64,29 @@ if __name__ == "__main__":
         f_out_RMS.write('\n')
 
     f_out_RMS.close()
-    C = C_min
+    C = C_min 
 
-    C = 16384
-    sigma = 3.5
-
-    sigma = sigma_min
-
-    print("C_min = " + str(C_min))
+    sigma = sigma_min 
+    print("C_min = " + str(C_min) + "\n")
     print("sigma_min = " + str(sigma_min))
+    f = open("mins.txt", "w")
+    f.write("C_min = " + str(C_min))
+    f.write("sigma_min = " + str(sigma_min))
+    f.close()
+    # для второго графика закомментить до сюда
+    """
+    C = 262144 
+    sigma = 1.5
+
+   
+
+    
 
     # вычисление среднеквадратичной ошибки для любого количества опорных векторов
-    inf = k_training(k, n, x, y, C, sigma, n, True)
+    inf = k_training(k, n, x, y, C, sigma, 20, True) # второе n заменить на ~20 при втором запуске
 
-    plt.plot(range(4, 41, 1), inf[3:40:1], '.-')
+    plt.plot(range(4, 21, 1), inf[3:20:1], '.-') # для второго запуска
+    #plt.plot(range(0, n, 1), inf[0:n:1], '.-')
 
     plt.title('Cross-validation error of GSLSSVM')
     plt.xlabel('number of vectors')

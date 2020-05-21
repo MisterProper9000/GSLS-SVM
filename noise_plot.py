@@ -18,18 +18,18 @@ if __name__ == "__main__":
     l = len(x_tr)
 
     x_test = []
-    for i in range(l // 10):                                      # генерация неповторяющихся вещественных чисел
+    for i in range(l ):                                      # генерация неповторяющихся вещественных чисел
         r = random.uniform(0, 2 * math.pi)
         if r not in x_test: 
             x_test.append(r)
     
-    noise = np.random.normal(0,0.1, l // 10)
-    y =  list(map(math.sin, x_test))
+    noise = np.random.normal(0,0.1, l)
+    y =  list(map(np.sinc, x_test))
     y_test = list(map(lambda a, b: a + b, noise, y))
 
-    C = 16384
-    sigma = 3.5
-    nv  = 4                              # оптимальное клоличество опорных векторов
+    C = 262144
+    sigma = 1.5  # с первого запуска на зашумлённых данных.
+    nv  = 5                              # оптимальное клоличество опорных векторов (пали график №4)
 
 
     K = [[0] * l for i in range(l)]
@@ -42,9 +42,9 @@ if __name__ == "__main__":
     y_res_3 = []
     y_res_4 = []
     RMS = 0
-    for i in range(l // 10):
-        y_res_3.append(f(x_test[i], x_tr, S, B[2], sigma))
-        y_res_4.append(f(x_test[i], x_tr, S, B[3], sigma))
+    for i in range(l):
+        y_res_3.append(f(x_test[i], x_tr, S, B[nv - 2], sigma))
+        y_res_4.append(f(x_test[i], x_tr, S, B[nv - 1], sigma))
         # RMS += (y_res[i] - y_test[i]) ** 2
     # RMS  = math.sqrt(RMS / l)
     # print("RMS = ", RMS)
@@ -67,11 +67,11 @@ if __name__ == "__main__":
     y_res_4_s  = [x[1] for x in res_4_s ]
 
 
-    plt.plot(x_test_s, y_test_s, '.', label = 'y = sin(x) + N(0, 0.1)')
-    # plt.plot(x_test, y_res_3, '*', label = 'y = f(x), n_ref = 3')  
-    # plt.plot(x_test, y_res_4, '*', label = 'y = f(x), n_ref = 4') 
-    plt.plot(x_test_s, y_res_3_s, '*-', label = 'y = f(x), n_ref = 3')  
-    plt.plot(x_test_s, y_res_4_s, '*-', label = 'y = f(x), n_ref = 4') 
+    plt.plot(x_test_s, y_test_s, '.', label = 'y = sinc(x) + N(0, 0.1)')
+    plt.plot(x_test, y_res_3, '*', label = 'y = f(x), n_ref = 4')  
+    plt.plot(x_test, y_res_4, '*', label = 'y = f(x), n_ref = 5') 
+    #plt.plot(x_test_s, y_res_3_s, '*-', label = 'y = f(x), n_ref = 4') # закоментить чтоб получить график №5 
+    #plt.plot(x_test_s, y_res_4_s, '*-', label = 'y = f(x), n_ref = 5') # закоментить чтоб получить график №5
     for i in S:
         x_ref.append(x_tr[i])
         y_ref.append(y_tr[i])

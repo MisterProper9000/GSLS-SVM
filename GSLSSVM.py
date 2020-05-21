@@ -94,7 +94,7 @@ def LS_SVM(C, sigma, K, x_tr, y_tr, nv_max, return_array):
     Omega_i = np.zeros(0) 
 
     for nv_i in range(nv_max):
-        print("nv_i =", nv_i)
+        #print("nv_i =", nv_i)
         Ind = list(set(range(l)) - set(S)) + [-1]  # список свободных индексов
         S.append(0)                                # добавление к ОВ нового индекса
         for i in Ind:                              # пеербор всех свободных индексов, для каждого строится и решается СЛАУ
